@@ -2,7 +2,7 @@ import { existsSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 
 import nextConfig from '../next.config'
-import { getConfig, getVendors, startAgent, stopAgent } from '../src/services/api'
+import { getConfig, startAgent, stopAgent } from '../src/services/api'
 
 type Rewrite = {
   source: string
@@ -67,12 +67,6 @@ async function verifyRewriteContract() {
       ),
       'next.config.ts should rewrite /api/stopAgent to /stopAgent on the Python backend',
     )
-    assert(
-      rewrites.some(
-        (rewrite) => rewrite.source === '/api/vendors' && rewrite.destination === 'http://localhost:8000/vendors',
-      ),
-      'next.config.ts should rewrite /api/vendors to /vendors on the Python backend',
-    )
   } finally {
     if (originalBackendUrl) {
       process.env.AGENT_BACKEND_URL = originalBackendUrl
@@ -106,7 +100,6 @@ async function verifyRouteHandlersRemoved() {
 async function verifyApiClientRequests() {
   const originalFetch = globalThis.fetch
   const seenPaths: string[] = []
-  let vendorAttempts = 0
 
   globalThis.fetch = (async (input, init) => {
     const url = requestUrl(input)
@@ -139,7 +132,6 @@ async function verifyApiClientRequests() {
       assert(body.channelName === 'test-channel', 'POST /api/startAgent should include channelName')
       assert(body.rtcUid === 9999, 'POST /api/startAgent should include rtcUid')
       assert(body.userUid === 1234, 'POST /api/startAgent should include userUid')
-      assert(body.vendor === 'azure', 'POST /api/startAgent should include the selected vendor')
 
       return Response.json({
         code: 0,
@@ -147,33 +139,6 @@ async function verifyApiClientRequests() {
           agent_id: 'mock-agent-id',
           channel_name: 'test-channel',
           status: 'started',
-        },
-        msg: 'success',
-      })
-    }
-
-    if (url.pathname === '/api/vendors') {
-      assert(init === undefined, 'GET /api/vendors should use the default GET request')
-      vendorAttempts += 1
-      if (vendorAttempts === 1) {
-        return Response.json({ detail: 'Backend is starting' }, { status: 503 })
-      }
-      return Response.json({
-        code: 0,
-        data: {
-          default: 'openai',
-          vendors: [
-            {
-              name: 'azure',
-              needs_key: true,
-              required_env: [
-                'AZURE_OPENAI_API_KEY',
-                'AZURE_OPENAI_REALTIME_URL',
-                'AZURE_OPENAI_REALTIME_MODEL',
-              ],
-            },
-            { name: 'openai', needs_key: true, required_env: ['OPENAI_API_KEY'] },
-          ],
         },
         msg: 'success',
       })
@@ -193,19 +158,13 @@ async function verifyApiClientRequests() {
     const config = await getConfig({ uid: 1234, channel: 'test-channel' })
     assert(config.token === 'stub-token', 'GET /api/get_config should return response data')
 
-    const vendors = await getVendors()
-    assert(vendors.default === 'openai', 'GET /api/vendors should return the default vendor')
-    assert(vendors.vendors[0]?.name === 'azure', 'GET /api/vendors should return Azure')
-    assert(vendorAttempts === 2, 'GET /api/vendors should retry a transient backend failure')
-
-    const agentId = await startAgent('test-channel', 9999, 1234, 'azure')
+    const agentId = await startAgent('test-channel', 9999, 1234)
     assert(agentId === 'mock-agent-id', 'POST /api/startAgent should return the agent id')
 
     await stopAgent(agentId)
 
     assert(
-      JSON.stringify(seenPaths) ===
-        JSON.stringify(['/api/get_config', '/api/vendors', '/api/vendors', '/api/startAgent', '/api/stopAgent']),
+      JSON.stringify(seenPaths) === JSON.stringify(['/api/get_config', '/api/startAgent', '/api/stopAgent']),
       'API client should call the unversioned /api paths',
     )
   } finally {

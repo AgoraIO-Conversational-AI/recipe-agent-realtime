@@ -12,7 +12,11 @@ type QuickstartPipelineMetricsProps = {
 };
 
 const PIPELINE = [
-	{ key: "mllm", label: "Realtime MLLM", metricTypes: ["mllm", "llm"] },
+	{
+		key: "mllm",
+		label: "OpenAI Realtime MLLM",
+		metricTypes: ["mllm", "llm"],
+	},
 ] as const;
 
 function formatMetricName(name: string) {

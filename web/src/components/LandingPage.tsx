@@ -9,8 +9,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { QuickstartPreCallCard } from "@/components/QuickstartPreCallCard";
 import { ShareButton } from "@/components/share-button";
-import { getConfig, getVendors, startAgent, stopAgent } from "@/services/api";
-import type { VendorOption } from "@/services/api";
+import { getConfig, startAgent, stopAgent } from "@/services/api";
 import type { AgoraRenewalTokens, AgoraTokenData } from "@/types/conversation";
 
 const ConversationComponent = dynamic(
@@ -94,23 +93,10 @@ export default function LandingPage() {
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [agentJoinError, setAgentJoinError] = useState(false);
-	const [vendors, setVendors] = useState<VendorOption[]>([]);
-	const [selectedVendor, setSelectedVendor] = useState("");
 
 	useEffect(() => {
 		import("agora-rtc-react").catch(() => {});
 		import("agora-rtm").catch(() => {});
-	}, []);
-
-	useEffect(() => {
-		getVendors()
-			.then((data) => {
-				setVendors(data.vendors);
-				setSelectedVendor(data.default);
-			})
-			.catch((nextError) => {
-				console.error("Failed to load realtime providers:", nextError);
-			});
 	}, []);
 
 	const handleStartConversation = async () => {
@@ -127,7 +113,6 @@ export default function LandingPage() {
 					config.channel_name,
 					Number(config.agent_uid),
 					Number(config.uid),
-					selectedVendor || undefined,
 				).catch((err) => {
 					console.error("Failed to start conversation with agent:", err);
 					setAgentJoinError(true);
@@ -222,11 +207,8 @@ export default function LandingPage() {
 					{!showConversation ? (
 						<QuickstartPreCallCard
 							isLoading={isLoading}
-							error={error}
-							onStartConversation={handleStartConversation}
-							vendors={vendors}
-							selectedVendor={selectedVendor}
-							onVendorChange={setSelectedVendor}
+								error={error}
+								onStartConversation={handleStartConversation}
 						/>
 					) : agoraData && rtmClient ? (
 						<>

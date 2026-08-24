@@ -1,12 +1,12 @@
 """
 Agent — Realtime Recipe
 
-High-level API for managing Agora Conversational AI Agents using a selectable
-realtime MLLM. The MLLM replaces the cascading STT->LLM->TTS:
+High-level API for managing Agora Conversational AI Agents using a single
+OpenAIRealtime MLLM. The MLLM replaces the cascading STT->LLM->TTS:
 
-  OpenAIRealtime or AzureOpenAIRealtime (voice-to-voice, server_vad)
+  OpenAIRealtime (voice-to-voice, server_vad turn detection)
 
-Provider settings are validated in start(), not __init__.
+OPENAI_API_KEY is REQUIRED for this recipe — validated in start(), not __init__.
 """
 import logging
 import os
@@ -14,17 +14,18 @@ from typing import Any, Dict, Optional
 
 from agora_agent import Area, AsyncAgora
 from agora_agent.agentkit import Agent as AgoraAgent
-from realtime_config import DEFAULT_VENDOR, build_vendor
+from realtime_config import build_realtime_mllm
 
 logger = logging.getLogger("uvicorn.error")
 
 
 class Agent:
     """
-    High-level wrapper for an Agora Conversational AI Agent using a realtime MLLM.
+    High-level wrapper for an Agora Conversational AI Agent using OpenAI Realtime.
 
-    The MLLM is attached via .with_mllm(). No separate STT, LLM, or TTS vendors
-    are used. Provider settings are validated at start() time.
+    Uses OpenAIRealtime MLLM (voice-to-voice, server_vad) attached via .with_mllm().
+    No separate STT, LLM, or TTS vendors are used. OPENAI_API_KEY is required and
+    is validated at start() time.
     """
 
     def __init__(self):
@@ -35,9 +36,10 @@ class Agent:
             "Hi! I'm a realtime voice assistant — let's just talk.",
         )
 
-        # Credential validation happens in start() so /get_config and the server
-        # can still run before the selected provider is configured.
-        self.vendor = os.getenv("MLLM_VENDOR", DEFAULT_VENDOR)
+        # OPENAI_API_KEY is required for OpenAI Realtime MLLM. Do NOT raise here —
+        # validated at start() so the server still boots when the key is missing.
+        self.openai_api_key = os.getenv("OPENAI_API_KEY")
+        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4o-realtime-preview")
 
         if not self.app_id or not self.app_certificate:
             raise ValueError("AGORA_APP_ID and AGORA_APP_CERTIFICATE are required")
@@ -56,7 +58,6 @@ class Agent:
         channel_name: str,
         agent_uid: int,
         user_uid: int,
-        vendor: Optional[str] = None,
         output_audio_codec: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Start realtime voice agent."""
@@ -67,8 +68,19 @@ class Agent:
         if user_uid <= 0:
             raise ValueError("user_uid is required and cannot be empty")
 
-        selected = (vendor or self.vendor).strip().lower()
-        mllm = build_vendor(selected, greeting=self.greeting)
+        # Validate OPENAI_API_KEY at start time (not __init__) so the server boots
+        # even when the key is absent, but refuses to start an agent without it.
+        if not self.openai_api_key:
+            raise ValueError(
+                "OPENAI_API_KEY is required for the realtime MLLM recipe "
+                "(set it in server/.env.local)"
+            )
+
+        mllm = build_realtime_mllm(
+            self.openai_api_key,
+            self.openai_model,
+            greeting=self.greeting,
+        )
 
         parameters = {
             "audio_scenario": "chorus",  # web client — ultra-low-latency chorus profile
@@ -99,11 +111,11 @@ class Agent:
         )
 
         logger.info(
-            "Starting realtime agent channel=%s agent_uid=%s user_uid=%s vendor=%s",
+            "Starting realtime agent channel=%s agent_uid=%s user_uid=%s model=%s",
             channel_name,
             agent_uid,
             user_uid,
-            selected,
+            self.openai_model,
         )
 
         try:
@@ -129,7 +141,6 @@ class Agent:
         return {
             "agent_id": agent_id,
             "channel_name": channel_name,
-            "vendor": selected,
             "status": "started",
         }
 

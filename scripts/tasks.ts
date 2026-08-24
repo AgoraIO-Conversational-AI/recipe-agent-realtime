@@ -17,7 +17,7 @@ const compileTargets = ["server.py","agent.py","realtime_config.py"]
 const requiredEnv = ["AGORA_APP_ID","AGORA_APP_CERTIFICATE"]
 const publicUrlKey = null
 const requirements = ["requirements.txt"]
-const setupMessage = "\nSetup complete! Next steps:\n   1. agora project env write server/.env.local   (or fill it in manually)\n   2. Fill in AGORA_APP_ID + AGORA_APP_CERTIFICATE in server/.env.local\n   3. Select MLLM_VENDOR and configure its variables from server/.env.example\n   4. Optionally set AGENT_GREETING\n   5. bun run dev\n\n"
+const setupMessage = "\nSetup complete! Next steps:\n   1. agora project env write server/.env.local   (or fill it in manually)\n   2. Fill in AGORA_APP_ID + AGORA_APP_CERTIFICATE in server/.env.local\n   3. Set OPENAI_API_KEY in server/.env.local (required — OpenAI Realtime access)\n   4. Optionally set OPENAI_MODEL, AGENT_GREETING\n   5. bun run dev\n\n"
 
 async function run(command: Command, cwd = root, env = process.env) {
   const child = Bun.spawn(command, {
