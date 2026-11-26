@@ -36,7 +36,7 @@ agora project env write server/.env.local # writes App ID + Certificate
 
 # 3. Add your OpenAI Realtime API key to server/.env.local
 #    OPENAI_API_KEY=sk-...   (required — OpenAI Realtime access)
-#    OPENAI_MODEL=gpt-4o-realtime-preview  (optional, this is the default)
+#    OPENAI_MODEL=gpt-realtime  (optional, this is the default)
 
 # 4. Run backend + web
 bun run dev
@@ -77,7 +77,7 @@ Backend env file: [`server/.env.example`](server/.env.example).
 | `AGORA_APP_ID` | ✅ | — | Agora Console → Project → App ID |
 | `AGORA_APP_CERTIFICATE` | ✅ | — | Agora Console → Project → App Certificate |
 | `OPENAI_API_KEY` | ✅ | — | BYO OpenAI key with Realtime API access. Validated at agent start. |
-| `OPENAI_MODEL` | | `gpt-4o-realtime-preview` | OpenAI Realtime model name |
+| `OPENAI_MODEL` | | `gpt-realtime` | OpenAI Realtime model name |
 | `AGENT_GREETING` | | built-in | Optional opening line override |
 
 ## Commands
