@@ -14,6 +14,7 @@ def _fresh_agent_module():
 
 
 def test_start_constructs_real_agent_and_returns_shape(fake_env, monkeypatch):
+    monkeypatch.delenv("OPENAI_MODEL", raising=False)
     agent = _fresh_agent_module()
     captured = {}
 
@@ -41,3 +42,4 @@ def test_start_constructs_real_agent_and_returns_shape(fake_env, monkeypatch):
     assert result["status"] == "started"
     assert captured["channel"] == "ch"
     assert captured["remote_uids"] == ["222"]
+    assert captured["mllm"]["params"]["model"] == "gpt-realtime"

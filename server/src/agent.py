@@ -39,7 +39,7 @@ class Agent:
         # OPENAI_API_KEY is required for OpenAI Realtime MLLM. Do NOT raise here —
         # validated at start() so the server still boots when the key is missing.
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
-        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4o-realtime-preview")
+        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-realtime")
 
         if not self.app_id or not self.app_certificate:
             raise ValueError("AGORA_APP_ID and AGORA_APP_CERTIFICATE are required")
